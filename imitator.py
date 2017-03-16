@@ -32,7 +32,9 @@ class Interceptor(object):
 
 # middleware for serving static files
 # TODO: let the user choose from what directory static files should be served
-static_files_middleware = SharedDataMiddleware(NotFound, {
+not_found_middleware = NotFound()
+
+static_files_middleware = SharedDataMiddleware(not_found_middleware, {
     '/': os.path.dirname(__file__)
 })
 
