@@ -26,16 +26,6 @@ class WSGIApplication(object):
             # if none of the urls matched, delegate the request to next middleware
             return self.app(environ, start_response)
 
-# middleware for serving static files
-# TODO: let the user choose from what directory static files should be served
-not_found_middleware = NotFound()
-
-static_files_middleware = SharedDataMiddleware(not_found_middleware, {
-    '/': os.path.dirname(__file__)
-})
-
-wsgi_application = WSGIApplication(static_files_middleware)
-
 
 class Interceptor(object):
     def __init__(self):
@@ -96,7 +86,17 @@ class Interceptor(object):
         path = self.paths.pop()
         self.rules.append(Rule(path, endpoint=response_wrapper))
 
-    def start(self):
+    def start(self, static_dir=None):
+        not_found_middleware = NotFound()
+
+        print static_dir, os.path.dirname(__file__)
+        # middleware for serving static files
+        static_files_middleware = SharedDataMiddleware(not_found_middleware, {
+            '/': static_dir or os.path.dirname(__file__)
+        })
+
+        wsgi_application = WSGIApplication(static_files_middleware)
+
         # plug the rules
         wsgi_application.url_map = Map(self.rules)
         run_simple('127.0.0.1', 5000, wsgi_application, use_debugger=True, use_reloader=True, threaded=True)
