@@ -64,6 +64,28 @@ class Interceptor(object):
 
         self.rules.append(Rule(path, endpoint=callback_wrapper))
 
+    def times(self, callback, times_to_call):
+        path = self.paths.pop()
+
+        def callback_wrapper(*args, **kwargs):
+            # if callback called reached, let static middleware handle the request
+            if callback_wrapper.calls_made >= callback_wrapper.times_to_call:
+                raise NotFound()
+            else:
+                response = callback(*args, **kwargs)
+                callback_wrapper.calls_made += 1
+
+            # let static middleware handle the request by raising NotFound
+            if not response:
+                raise NotFound()
+
+            # otherwise, return the response
+            return response
+
+        callback_wrapper.calls_made = 0
+        callback_wrapper.times_to_call = times_to_call
+        self.rules.append(Rule(path, endpoint=callback_wrapper))
+
     def response(self, *args, **kwargs):
         # server_instance.when('/some/path').response(status=404, response='im 404')
         # pass same parameters as Response() expects
