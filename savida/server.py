@@ -1,12 +1,3 @@
-import os
-
-from werkzeug.wrappers import Request, Response
-from werkzeug.serving import run_simple
-from werkzeug.wsgi import SharedDataMiddleware
-from werkzeug.routing import Map, Rule
-from werkzeug.exceptions import HTTPException, NotFound
-import time
-
 """
 TODO:
     (1) the server is running on main thread, currently there is no way to stop it programatically.
@@ -32,16 +23,31 @@ TODO:
         NOTE 1: this only works on development server.
         NOTE 2: multithreading still needed.
 
-    (2) the web server does not look for available free port that it can use, currently port is hardcoded.
+    (2) the web server does not look for available free port that it can use,
+        currently port is hardcoded.
 
     See example.py for usage example.
 """
+import os
+
+from werkzeug.wrappers import Request, Response
+from werkzeug.serving import run_simple
+from werkzeug.wsgi import SharedDataMiddleware
+from werkzeug.routing import Map, Rule
+from werkzeug.exceptions import HTTPException, NotFound
+import time
 
 
 class WSGIApplication(object):
+
     def __init__(self, app):
         self.url_map = Map([])
         self.app = app
+
+    def shutdown_server(self, environ):
+        if not 'werkzeug.server.shutdown' in environ:
+            raise RuntimeError('Not running the development server')
+        environ['werkzeug.server.shutdown']()
 
     def __call__(self, environ, start_response):
         # try to match URL from url_map
@@ -52,15 +58,18 @@ class WSGIApplication(object):
             endpoint, values = adapter.match()
             response = endpoint(request, **values)
             return response(environ, start_response)
-        except HTTPException as error:
-            # if none of the urls matched, delegate the request to next middleware
+        except HTTPException:
+            # if none of the urls matched, delegate to next middleware
             return self.app(environ, start_response)
 
 
-class Interceptor(object):
-    def __init__(self):
+class Server(object):
+
+    def __init__(self, document_root=None):
+        self._app = None
         self.paths = []
         self.rules = []
+        self.document_root = document_root
 
     def when(self, path):
         self.paths.append(
@@ -116,20 +125,19 @@ class Interceptor(object):
         path = self.paths.pop()
         self.rules.append(Rule(path, endpoint=response_wrapper))
 
-    def start(self, static_dir=None):
-        not_found_middleware = NotFound()
+    def start(self):
+        middleware = NotFound()
+        if self.document_root:
+            # middleware for serving static files
+            middleware = SharedDataMiddleware(middleware,
+                                              {"/": self.document_root})
 
-        print static_dir, os.path.dirname(__file__)
-        # middleware for serving static files
-        static_files_middleware = SharedDataMiddleware(not_found_middleware, {
-            '/': static_dir or os.path.dirname(__file__)
-        })
-
-        wsgi_application = WSGIApplication(static_files_middleware)
+        self._app = WSGIApplication(middleware)
 
         # plug the rules
-        wsgi_application.url_map = Map(self.rules)
-        run_simple('127.0.0.1', 5000, wsgi_application, use_debugger=True, use_reloader=True, threaded=True)
+        self._app.url_map = Map(self.rules)
+
+        run_simple('127.0.0.1', 5000, self._app, threaded=True)
 
     def stop(self):
         """
