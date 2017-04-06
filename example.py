@@ -1,4 +1,4 @@
-from imitator import Interceptor
+from savida.server import Server
 from werkzeug.wrappers import Response
 
 """
@@ -7,10 +7,10 @@ from werkzeug.wrappers import Response
     it is the `static_files_middleware`
 """
 
-http_server = Interceptor()
+http_server = Server(static_dir='/home/vladimir/Shoppimon/web-server-imitator/static2')
 
 # respond with custom status and response
-http_server.when('/js/main.js').response(status=404, response='im 404')
+http_server.when('/js/main.js').response(status=404, response='Gone to Lunch')
 
 # wait 5 seconds and then return the file
 http_server.when('/css/normalize.css').wait(seconds=5)
@@ -23,4 +23,4 @@ http_server.when('/css/main.css').call(lambda request: Response(status=200, resp
 http_server.when('/js/plugins.js').times(lambda request: Response(status=200, response='Understood'), 3)
 
 # serve directory of static files
-http_server.start(static_dir='/home/vladimir/Shoppimon/web-server-imitator/static2')
+http_server.start()
