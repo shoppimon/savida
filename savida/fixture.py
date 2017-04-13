@@ -10,7 +10,7 @@ class ServerWrapper(object):
         self._proc = None
         self.server = server
 
-    def start(self):
+    def serve(self):
         self._proc = multiprocessing.Process(target=self.server.start)
         self._proc.start()
         return self
@@ -18,6 +18,12 @@ class ServerWrapper(object):
     def stop(self):
         self._proc.terminate()
         self._proc.join()
+
+    @property
+    def base_url(self):
+        if self._proc is None:
+            raise RuntimeError("Server was not started yet, no base_url set")
+        return self.server.base_url
 
 
 @contextlib.contextmanager
