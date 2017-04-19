@@ -35,7 +35,7 @@ like:
             # Wait 10 seconds before responding to /slow.php
             server.when('/slow.php').wait(10)
 
-            server.serve()
+            server.start()
 
             response = requests.get(server.url + '/js/main.js')
             assert response.status_code == 404

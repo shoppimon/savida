@@ -20,12 +20,6 @@ class ServerWrapper(object):
             self._proc.terminate()
             self._proc.join()
 
-    @property
-    def base_url(self):
-        if self._proc is None:
-            raise RuntimeError("Server was not started yet, no base_url set")
-        return self.server.base_url
-
     def __getattr__(self, item):
         return getattr(self.server, item)
 
