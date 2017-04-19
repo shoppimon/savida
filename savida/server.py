@@ -115,10 +115,12 @@ class Server(object):
         self.rules.append(Rule(path, endpoint=callback_wrapper))
 
     def response(self, *args, **kwargs):
+        """Set the exact response to return when a certain URL is requested
+        """
         # server_instance.when('/some/path').response(status=404, response='im 404')
         # pass same parameters as Response() expects
         # we should return Response() object
-        def response_wrapper(request):
+        def response_wrapper(_):
             return Response(*args, **kwargs)
 
         path = self.paths.pop()
