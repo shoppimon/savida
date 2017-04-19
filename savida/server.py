@@ -1,17 +1,17 @@
+"""Server wrapper for Savida
 """
-TODO:
 
-    (2) the web server does not look for available free port that it can use,
-        currently port is hardcoded.
+import socket
+import time
 
-    See example.py for usage example.
-"""
-from werkzeug.wrappers import Request, Response
+from werkzeug.wrappers import Request
+from werkzeug.wrappers import Response
 from werkzeug.serving import run_simple
 from werkzeug.wsgi import SharedDataMiddleware
-from werkzeug.routing import Map, Rule
-from werkzeug.exceptions import HTTPException, NotFound
-import time
+from werkzeug.routing import Map
+from werkzeug.routing import Rule
+from werkzeug.exceptions import HTTPException
+from werkzeug.exceptions import NotFound
 
 
 class WSGIApplication(object):
@@ -41,7 +41,8 @@ class Server(object):
         self.paths = []
         self.rules = []
         self.document_root = document_root
-        self.base_url = 'http://127.0.0.1:5000'
+        self.host = '127.0.0.1'
+        self.port = _find_free_port()
 
     def when(self, path):
         self.paths.append(
@@ -111,7 +112,14 @@ class Server(object):
         # plug the rules
         self._app.url_map = Map(self.rules)
 
-        run_simple('127.0.0.1', 5000, self._app, threaded=True)
+        run_simple(self.host, self.port, self._app, threaded=True)
+
+    @property
+    def base_url(self):
+        if self.port is None:
+            raise RuntimeError("Server was not started, base_url is unknown")
+        return 'http://{}:{}'.format(self.host, self.port)
+
 
         """
         """
@@ -125,3 +133,13 @@ class Server(object):
 
         path = self.paths.pop()
         self.rules.append(Rule(path, endpoint=callback))
+
+def _find_free_port():
+    """Find a free port to listen on
+    """
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s.bind(('', 0))
+    s.listen(1)
+    port = s.getsockname()[1]
+    s.close()
+    return port
