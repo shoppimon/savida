@@ -70,6 +70,7 @@ class Server(object):
         self.paths = []
         self.rules = []
         self.document_root = document_root
+        self.base_url = 'http://127.0.0.1:5000'
 
     def when(self, path):
         self.paths.append(
@@ -154,4 +155,3 @@ class Server(object):
 
         path = self.paths.pop()
         self.rules.append(Rule(path, endpoint=callback))
-
