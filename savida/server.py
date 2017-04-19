@@ -28,8 +28,6 @@ TODO:
 
     See example.py for usage example.
 """
-import os
-
 from werkzeug.wrappers import Request, Response
 from werkzeug.serving import run_simple
 from werkzeug.wsgi import SharedDataMiddleware
@@ -45,7 +43,7 @@ class WSGIApplication(object):
         self.app = app
 
     def shutdown_server(self, environ):
-        if not 'werkzeug.server.shutdown' in environ:
+        if 'werkzeug.server.shutdown' not in environ:
             raise RuntimeError('Not running the development server')
         environ['werkzeug.server.shutdown']()
 
