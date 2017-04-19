@@ -1,27 +1,5 @@
 """
 TODO:
-    (1) the server is running on main thread, currently there is no way to stop it programatically.
-
-        Werkzeug provides a way to shutdown werkzeug server:
-        http://werkzeug.pocoo.org/docs/0.11/serving/#shutting-down-the-server
-
-        Basically, it is possible to configure a Rule that when invoked will terminate Werzkzeug:
-
-        (WSGIApplication)
-        self.url_map = Map([
-            Rule('/shutdown', endpoint=self.shutdown)
-        ])
-
-        def shutdown(self, request):
-            shutdown_func = request.environ.get('werkzeug.server.shutdown', None)
-            if not shutdown_func:
-                raise RuntimeError('Not running with the Werkzeug Server')
-            shutdown_func()
-
-        in this case, making GET on `/shutdown` will invoke the werkzeug shutdown function.
-
-        NOTE 1: this only works on development server.
-        NOTE 2: multithreading still needed.
 
     (2) the web server does not look for available free port that it can use,
         currently port is hardcoded.
@@ -41,11 +19,6 @@ class WSGIApplication(object):
     def __init__(self, app):
         self.url_map = Map([])
         self.app = app
-
-    def shutdown_server(self, environ):
-        if 'werkzeug.server.shutdown' not in environ:
-            raise RuntimeError('Not running the development server')
-        environ['werkzeug.server.shutdown']()
 
     def __call__(self, environ, start_response):
         # try to match URL from url_map
@@ -140,11 +113,8 @@ class Server(object):
 
         run_simple('127.0.0.1', 5000, self._app, threaded=True)
 
-    def stop(self):
         """
-        Not Implemented.
         """
-        pass
 
     def wait(self, seconds):
         # server_instance.when('/some/path').wait(seconds=5)
