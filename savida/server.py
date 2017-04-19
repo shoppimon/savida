@@ -38,67 +38,14 @@ class Server(object):
 
     def __init__(self, document_root=None):
         self._app = None
-        self.paths = []
         self.rules = []
         self.document_root = document_root
         self.host = '127.0.0.1'
         self.port = _find_free_port()
 
-    def when(self, path):
-        self.paths.append(
-            path
-        )
-
-        return self
-
-    def call(self, callback):
-        path = self.paths.pop()
-
-        def callback_wrapper(request):
-            response = callback(request)
-
-            # pass request to static middleware by raising NotFound
-            if not response:
-                raise NotFound()
-
-            # otherwise, return the response
-            return response
-
-        self.rules.append(Rule(path, endpoint=callback_wrapper))
-
-    def times(self, callback, times_to_call):
-        path = self.paths.pop()
-
-        def callback_wrapper(*args, **kwargs):
-            # if callback called reached, let static middleware handle the request
-            if callback_wrapper.calls_made >= callback_wrapper.times_to_call:
-                raise NotFound()
-            else:
-                response = callback(*args, **kwargs)
-                callback_wrapper.calls_made += 1
-
-            # let static middleware handle the request by raising NotFound
-            if not response:
-                raise NotFound()
-
-            # otherwise, return the response
-            return response
-
-        callback_wrapper.calls_made = 0
-        callback_wrapper.times_to_call = times_to_call
-        self.rules.append(Rule(path, endpoint=callback_wrapper))
-
-    def response(self, *args, **kwargs):
-        """Set the exact response to return when a certain URL is requested
-        """
-        # server_instance.when('/some/path').response(status=404, response='im 404')
-        # pass same parameters as Response() expects
-        # we should return Response() object
-        def response_wrapper(_):
-            return Response(*args, **kwargs)
-
-        path = self.paths.pop()
-        self.rules.append(Rule(path, endpoint=response_wrapper))
+    def when(self, path, methods=None):
+        rule = RuleMaker(self, path, methods)
+        return rule
 
     def start(self):
         middleware = NotFound()
@@ -121,18 +68,45 @@ class Server(object):
         return 'http://{}:{}'.format(self.host, self.port)
 
 
-        """
-        """
+class RuleMaker(object):
+    """An object responsible for creating routing rules
+    """
 
-    def wait(self, seconds):
-        # server_instance.when('/some/path').wait(seconds=5)
-        def callback(request):
-            time.sleep(seconds)
-            # raise exception so that the static middleware will handle this request
+    def __init__(self, server, path, methods=None):
+        self.server = server
+        self.path = path
+        self.methods = methods
+
+    def response(self, *args, **kwargs):
+        """Return a response when the rule is invoked
+        """
+        def f(_):
+            return Response(*args, **kwargs)
+        self._make_rule(f)
+        return self
+
+    def call(self, callback):
+        """Call a callback when the rule is invoked
+        """
+        self._make_rule(callback)
+        return self
+
+    def wait(self, delay):
+        """Delay the response when the rule is matched
+        """
+        def f(_):
+            time.sleep(delay)
+            # Raise exception so that we proceed to the next middleware
             raise NotFound()
+        self._make_rule(f)
+        return self
 
-        path = self.paths.pop()
-        self.rules.append(Rule(path, endpoint=callback))
+    def _make_rule(self, callback):
+        """Create and inject the rule into the server's list of rules
+        """
+        rule = Rule(self.path, methods=self.methods, endpoint=callback)
+        self.server.rules.append(rule)
+
 
 def _find_free_port():
     """Find a free port to listen on
