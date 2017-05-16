@@ -19,8 +19,7 @@ Note that while the examples below refer to `py.test`, this module is in
 no way tied to a specific testing framework or methodology.
 
 # Usage
-In testing frameworks like `py.test`, usage usually looks something
-like:
+In testing frameworks like `py.test`, usage usually looks something like:
 
     from savida.fixture import http_server
 
@@ -40,6 +39,7 @@ like:
             response = requests.get(server.url + '/js/main.js')
             assert response.status_code == 404
 
+
 ## Usage in module setup / teardown functions
 TBD
 
@@ -47,7 +47,21 @@ TBD
 TBD
 
 # TODO
-TBD
+* Add documentation
+* Clean up API, replace `wait` method with something more concise
+* Add support for matching based on HTTP method
 
 # License
-TBD
+Copyright (c) 2017 Shoppimon LTD
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+   http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
