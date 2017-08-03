@@ -17,6 +17,7 @@
 
 import socket
 import time
+import ssl
 
 from werkzeug.wrappers import Request
 from werkzeug.wrappers import Response
@@ -48,14 +49,40 @@ class WSGIApplication(object):
             return self.app(environ, start_response)
 
 
+class DelayedWSGIApplication(WSGIApplication):
+
+    def __init__(self, app, delay_time):
+        super(DelayedWSGIApplication, self).__init__(app)
+        self.delay_time = delay_time
+
+    def __call__(self, environ, start_response):
+        # try to match URL from url_map
+        request = Request(environ)
+        adapter = self.url_map.bind_to_environ(request)
+
+        time.sleep(self.delay_time)
+
+        try:
+            endpoint, values = adapter.match()
+            response = endpoint(request, **values)
+            return response(environ, start_response)
+        except HTTPException:
+            # if none of the urls matched, delegate to next middleware
+            return self.app(environ, start_response)
+
+
 class Server(object):
 
-    def __init__(self, document_root=None):
+    def __init__(self, document_root=None, ssl_key=None, ssl_cert=None, ssl_encryption=False, delayed_response=None):
         self._app = None
         self.rules = []
         self.document_root = document_root
         self.host = '127.0.0.1'
         self.port = _find_free_port()
+        self.ssl_encryption = ssl_encryption
+        self.ssl_key = ssl_key
+        self.ssl_cert = ssl_cert
+        self.delayed_response = delayed_response
 
     def when(self, path, methods=None):
         rule = RuleMaker(self, path, methods)
@@ -68,17 +95,30 @@ class Server(object):
             middleware = SharedDataMiddleware(middleware,
                                               {"/": self.document_root})
 
-        self._app = WSGIApplication(middleware)
+        if self.delayed_response:
+            self._app = DelayedWSGIApplication(middleware, self.delayed_response)
+        else:
+            self._app = WSGIApplication(middleware)
 
         # plug the rules
         self._app.url_map = Map(self.rules)
 
-        run_simple(self.host, self.port, self._app, threaded=True)
+        if self.ssl_encryption:
+            try:
+                ctx = ssl.SSLContext(ssl.PROTOCOL_SSLv23)
+                ctx.load_cert_chain(self.ssl_cert, self.ssl_key)
+                run_simple(self.host, self.port, self._app, threaded=True, ssl_context=ctx)
+            except TypeError:
+                pass
+        else:
+            run_simple(self.host, self.port, self._app, threaded=False)
 
     @property
     def base_url(self):
         if self.port is None:
             raise RuntimeError("Server was not started, base_url is unknown")
+        if self.ssl_encryption:
+            return 'https://{}:{}'.format(self.host, self.port)
         return 'http://{}:{}'.format(self.host, self.port)
 
 
@@ -112,6 +152,16 @@ class RuleMaker(object):
             time.sleep(delay)
             # Raise exception so that we proceed to the next middleware
             raise NotFound()
+        self._make_rule(f)
+        return self
+
+    def redirect(self, location, code=302):
+        """Redirect to a given location
+        """
+        def f(_):
+            response = Response('<p>Redirected to {}, HTTP Status code: {}</p>'.format(location, code), mimetype='text/html')
+            response.headers['Location'] = location
+            return response
         self._make_rule(f)
         return self
 
