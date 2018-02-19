@@ -17,11 +17,16 @@
 
 import contextlib
 import multiprocessing
+import socket
+import time
 
 from savida.server import Server
 
 
 class ServerWrapper(object):
+
+    UP_CHECK_INTERVAL = 0.01
+    UP_TIMEOUT = 10
 
     def __init__(self, server):
         self._proc = None
@@ -30,12 +35,23 @@ class ServerWrapper(object):
     def start(self):
         self._proc = multiprocessing.Process(target=self.server.start)
         self._proc.start()
+        self._wait_for_server_up()
         return self
 
     def stop(self):
         if self._proc is not None:
             self._proc.terminate()
             self._proc.join()
+
+    def _wait_for_server_up(self):
+        for _ in range(int(self.UP_TIMEOUT / self.UP_CHECK_INTERVAL)):
+            s = socket.socket()
+            try:
+                s.connect((self.server.host, self.server.port))
+                return True
+            except socket.error as e:
+                time.sleep(self.UP_CHECK_INTERVAL)
+        raise RuntimeError("Could not verify that server is up after %d seconds", self.UP_TIMEOUT)
 
     def __getattr__(self, item):
         return getattr(self.server, item)
