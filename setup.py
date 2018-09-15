@@ -7,10 +7,11 @@ from setuptools import setup, find_packages
 setup(
     name='savida',
     version=open('VERSION').read(),
-    description='Savida Test HTTP Server',
+    description='Savida - Testing HTTP Server',
     author='Shahar Evron',
     author_email='shahar@shoppimon.com',
-    url='https://bitbucket.org/shoppimon/savida',
+    license='Apache 2.0',
+    url='https://github.com/shoppimon/savida',
     packages=find_packages(),
     install_requires=['Werkzeug'],
 )
