@@ -2,3 +2,4 @@ venv/
 /.idea/
 /savida.egg-info
 *.pyc
+/dist/*
