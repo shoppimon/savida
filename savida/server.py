@@ -22,7 +22,7 @@ import ssl
 from werkzeug.wrappers import Request
 from werkzeug.wrappers import Response
 from werkzeug.serving import run_simple
-from werkzeug.wsgi import SharedDataMiddleware
+from werkzeug.middleware.shared_data import SharedDataMiddleware
 from werkzeug.routing import Map
 from werkzeug.routing import Rule
 from werkzeug.exceptions import HTTPException
@@ -159,7 +159,8 @@ class RuleMaker(object):
         """Redirect to a given location
         """
         def f(_):
-            response = Response('<p>Redirected to {}, HTTP Status code: {}</p>'.format(location, code), mimetype='text/html')
+            response = Response('<p>Redirected to {}, HTTP Status code: {}</p>'.format(location, code),
+                                mimetype='text/html')
             response.headers['Location'] = location
             return response
         self._make_rule(f)

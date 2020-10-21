@@ -1,6 +1,9 @@
-venv/
+/venv*
+/.venv*
 /.idea/
-/savida.egg-info
+/*.egg-info
 *.pyc
+**/__pycache__
 /dist/
 /build/
+/.python-version
