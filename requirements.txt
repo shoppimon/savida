@@ -4,4 +4,7 @@
 #
 #    pip-compile --no-emit-index-url --output-file=requirements.txt requirements.in
 #
-werkzeug==1.0.1           # via -r requirements.in
+markupsafe==2.1.2
+    # via werkzeug
+werkzeug==2.2.3
+    # via -r requirements.in
